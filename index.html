@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <title>My Wealth Manager</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont,
+                         "Segoe UI", Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            color: #222;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #173b66;
+            font-size: 26px;
+            margin-bottom: 25px;
+        }
+
+        h3 {
+            margin-top: 0;
+            color: #173b66;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            margin-top: 15px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            border: 1px solid #d5dce5;
+            border-radius: 10px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #1769aa;
+        }
+
+        input[readonly] {
+            background: #eef2f6;
+            color: #555;
+        }
+
+        button {
+            width: 100%;
+            background: #1769aa;
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:active {
+            background: #10518a;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 15px;
+        }
+
+        .row:last-child {
+            border-bottom: none;
+        }
+
+        .row strong {
+            white-space: nowrap;
+        }
+
+        .highlight {
+            background: #eaf5ee;
+            padding: 14px;
+            border-radius: 10px;
+            margin-top: 15px;
+            color: #176c38;
+        }
+
+        .summary {
+            background: #173b66;
+            color: white;
+            padding: 18px;
+            border-radius: 12px;
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .summary h2 {
+            margin: 5px 0;
+            font-size: 26px;
+        }
+
+        .percentage {
+            color: #777;
+            font-size: 13px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-top: 20px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e8edf3;
+        }
+
+        .error {
+            color: #b42318;
+            font-size: 13px;
+            min-height: 18px;
+            margin-top: 8px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>💰 My Wealth Manager</h1>
+
+    <!-- MONTHLY INCOME ALLOCATION -->
+
+    <div class="card">
+
+        <h3>Monthly Income Allocation</h3>
+
+        <label for="income">
+            Monthly Take Home Income (₹)
+        </label>
+
+        <input
+            type="number"
+            id="income"
+            value="471000"
+            min="0"
+            step="0.01"
+            inputmode="decimal"
+        >
+
+        <button type="button" onclick="calculateIncome()">
+            Calculate Surplus
+        </button>
+
+        <div class="row">
+            <span>Fixed Monthly Expenses</span>
+            <strong>₹2,35,500</strong>
+        </div>
+
+        <label for="surplus">
+            Investible Surplus (₹)
+        </label>
+
+        <input
+            type="number"
+            id="surplus"
+            value="250000"
+            min="0"
+            step="0.01"
+            inputmode="decimal"
+            oninput="updateInvestment()"
+        >
+
+        <div id="surplusError" class="error"
+             role="alert"></div>
+
+        <div class="highlight">
+            Your investible surplus is editable.
+            Any change will automatically update
+            your investment allocation.
+        </div>
+
+    </div>
+
+    <!-- INVESTMENT ALLOCATION -->
+
+    <div class="card">
+
+        <h3>Investment Allocation</h3>
+
+        <label for="investment">
+            Investment Amount (₹)
+        </label>
+
+        <input
+            type="number"
+            id="investment"
+            value="250000"
+            readonly
+        >
+
+        <div class="section-title">
+            📈 Equity Allocation — 65%
+        </div>
+
+        <div id="equityResults"></div>
+
+        <div class="section-title">
+            🏦 Defensive / Reserve Allocation — 35%
+        </div>
+
+        <div id="fixedResults"></div>
+
+        <div class="summary">
+            <div>Total Monthly Investment</div>
+            <h2 id="totalInvestment">
+                ₹2,50,000
+            </h2>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+    // ----------------------------------
+    // CONFIGURATION
+    // ----------------------------------
+
+    const fixedExpenses = 221000;
+
+    const allocations = [
+
+        {
+            name: "🎯 5 in 5 - Long Term",
+            percent: 27,
+            category: "equity"
+        },
+
+        {
+            name: "⚡ MPO - Short Term",
+            percent: 18,
+            category: "equity"
+        },
+
+        {
+            name: "📊 Mutual Funds",
+            percent: 20,
+            category: "equity"
+        },
+
+        {
+            name: "🥇 Gold",
+            percent: 5,
+            category: "fixed"
+        },
+
+        {
+            name: "🛟 Emergency Fund",
+            percent: 10,
+            category: "fixed"
+        },
+
+        {
+            name: "💧 Liquid BeES",
+            percent: 20,
+            category: "fixed"
+        }
+
+    ];
+
+
+    // ----------------------------------
+    // FORMAT CURRENCY
+    // ----------------------------------
+
+    function formatCurrency(value) {
+
+        return "₹" + value.toLocaleString("en-IN", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        });
+
+    }
+
+
+    // ----------------------------------
+    // CALCULATE INCOME
+    // ----------------------------------
+
+    function calculateIncome() {
+
+        const incomeInput =
+            document.getElementById("income");
+
+        const income = Number(incomeInput.value);
+
+        if (
+            incomeInput.value.trim() === "" ||
+            !Number.isFinite(income) ||
+            income < 0
+        ) {
+
+            alert("Please enter a valid monthly income.");
+            return;
+
+        }
+
+        const surplus = Math.max(
+            income - fixedExpenses,
+            0
+        );
+
+        document.getElementById("surplus").value =
+            surplus;
+
+        updateInvestment();
+
+    }
+
+
+    // ----------------------------------
+    // UPDATE INVESTMENT
+    // ----------------------------------
+
+    function updateInvestment() {
+
+        const surplusInput =
+            document.getElementById("surplus");
+
+        const surplus = Number(surplusInput.value);
+
+        const error =
+            document.getElementById("surplusError");
+
+        if (
+            surplusInput.value.trim() === "" ||
+            !Number.isFinite(surplus) ||
+            surplus < 0
+        ) {
+
+            error.textContent =
+                "Please enter a valid investible surplus.";
+
+            document.getElementById("investment").value = "";
+
+            document.getElementById("equityResults").innerHTML = "";
+
+            document.getElementById("fixedResults").innerHTML = "";
+
+            document.getElementById("totalInvestment").textContent =
+                "₹0";
+
+            return;
+
+        }
+
+        error.textContent = "";
+
+        document.getElementById("investment").value =
+            surplus;
+
+        calculateInvestment();
+
+    }
+
+
+    // ----------------------------------
+    // CALCULATE INVESTMENT
+    // ----------------------------------
+
+    function calculateInvestment() {
+
+        const amount = Number(
+            document.getElementById("investment").value
+        );
+
+        let equityHTML = "";
+        let fixedHTML = "";
+
+        allocations.forEach(item => {
+
+            const allocation =
+                amount * item.percent / 100;
+
+            const row = `
+                <div class="row">
+
+                    <span>
+                        ${item.name}
+                        <br>
+                        <span class="percentage">
+                            ${item.percent}% of surplus
+                        </span>
+                    </span>
+
+                    <strong>
+                        ${formatCurrency(allocation)}
+                    </strong>
+
+                </div>
+            `;
+
+            if (item.category === "equity") {
+
+                equityHTML += row;
+
+            } else {
+
+                fixedHTML += row;
+
+            }
+
+        });
+
+        document.getElementById("equityResults").innerHTML =
+            equityHTML;
+
+        document.getElementById("fixedResults").innerHTML =
+            fixedHTML;
+
+        document.getElementById("totalInvestment").textContent =
+            formatCurrency(amount);
+
+    }
+
+
+    // ----------------------------------
+    // INITIAL LOAD
+    // ----------------------------------
+
+    calculateIncome();
+
+</script>
+
+</body>
+</html>
